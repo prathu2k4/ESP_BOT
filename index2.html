@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 PID Tuner</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        .container { max-width: 400px; margin: auto; padding: 20px; border: 2px solid #333; border-radius: 10px; }
+        .status { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: red; }
+        .connected { color: green; }
+        .pid-input { margin: 5px 0; width: 80px; text-align: center; }
+        .hidden { display: none; }
+        button { margin-top: 10px; padding: 10px 15px; font-size: 16px; cursor: pointer; }
+    </style>
+    <script>
+        const ESP_IP = "http://<ESP32_IP>"; // Replace with ESP32's IP
+
+        async function fetchData() {
+            try {
+                const response = await fetch(ESP_IP + '/status');
+                const data = await response.json();
+                
+                if (data.connected) {
+                    document.getElementById('status').innerText = "Connected ✅";
+                    document.getElementById('status').classList.add("connected");
+                    document.getElementById('status').classList.remove("status");
+                    
+                    document.getElementById('pid-container').classList.remove("hidden");
+
+                    document.getElementById('Kp').value = data.Kp;
+                    document.getElementById('Ki').value = data.Ki;
+                    document.getElementById('Kd').value = data.Kd;
+                } else {
+                    document.getElementById('status').innerText = "Not Connected ❌";
+                    document.getElementById('status').classList.add("status");
+                    document.getElementById('status').classList.remove("connected");
+
+                    document.getElementById('pid-container').classList.add("hidden");
+                }
+            } catch (error) {
+                document.getElementById('status').innerText = "Connection Error ❌";
+                document.getElementById('pid-container').classList.add("hidden");
+            }
+        }
+
+        async function updatePID() {
+            let Kp = document.getElementById("Kp").value;
+            let Ki = document.getElementById("Ki").value;
+            let Kd = document.getElementById("Kd").value;
+
+            await fetch(ESP_IP + '/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `Kp=${Kp}&Ki=${Ki}&Kd=${Kd}`
+            });
+
+            alert("PID Updated!");
+        }
+
+        function autoUpdate() {
+            fetchData();
+            setTimeout(autoUpdate, 2000); // Refresh data every 2 seconds
+        }
+
+        window.onload = autoUpdate;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2>ESP32 Line Follower PID Control</h2>
+        <p id="status" class="status">Checking connection...</p>
+
+        <div id="pid-container" class="hidden">
+            <div>
+                <label for="Kp">Kp:</label>
+                <input class="pid-input" type="number" id="Kp" step="0.1">
+            </div>
+            <div>
+                <label for="Ki">Ki:</label>
+                <input class="pid-input" type="number" id="Ki" step="0.01">
+            </div>
+            <div>
+                <label for="Kd">Kd:</label>
+                <input class="pid-input" type="number" id="Kd" step="0.1">
+            </div>
+            <button onclick="updatePID()">Update PID</button>
+        </div>
+    </div>
+</body>
+</html>

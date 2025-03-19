@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 PID Tuner</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        .container { max-width: 400px; margin: auto; padding: 20px; border: 2px solid #333; border-radius: 10px; }
+        .status { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+        .pid-input { margin: 5px 0; }
+        .wheel { width: 80px; height: 80px; background: #ccc; border-radius: 50%; display: inline-block; text-align: center; font-size: 18px; line-height: 80px; cursor: pointer; }
+        button { margin-top: 10px; padding: 10px 15px; font-size: 16px; cursor: pointer; }
+    </style>
+    <script>
+        const ESP_IP = "http://<ESP32_IP>"; // Replace with ESP32's IP
+
+        async function fetchData() {
+            const response = await fetch(ESP_IP + '/status');
+            const data = await response.json();
+            document.getElementById('status').innerText = data.connected ? "Connected ✅" : "Not Connected ❌";
+            document.getElementById('Kp').value = data.Kp;
+            document.getElementById('Ki').value = data.Ki;
+            document.getElementById('Kd').value = data.Kd;
+        }
+
+        async function updatePID() {
+            let Kp = document.getElementById("Kp").value;
+            let Ki = document.getElementById("Ki").value;
+            let Kd = document.getElementById("Kd").value;
+            
+            await fetch(ESP_IP + '/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `Kp=${Kp}&Ki=${Ki}&Kd=${Kd}`
+            });
+
+            alert("PID Updated!");
+            fetchData();
+        }
+
+        function adjustPID(param, change) {
+            let input = document.getElementById(param);
+            input.value = (parseFloat(input.value) + change).toFixed(2);
+            updatePID();
+        }
+    </script>
+</head>
+<body onload="fetchData()">
+    <div class="container">
+        <h2>ESP32 Line Follower PID Control</h2>
+        <p class="status" id="status">Checking...</p>
+        
+        <div>
+            <label for="Kp">Kp:</label>
+            <button onclick="adjustPID('Kp', -0.1)">-</button>
+            <input class="pid-input" type="number" id="Kp" step="0.1">
+            <button onclick="adjustPID('Kp', 0.1)">+</button>
+        </div>
+
+        <div>
+            <label for="Ki">Ki:</label>
+            <button onclick="adjustPID('Ki', -0.01)">-</button>
+            <input class="pid-input" type="number" id="Ki" step="0.01">
+            <button onclick="adjustPID('Ki', 0.01)">+</button>
+        </div>
+
+        <div>
+            <label for="Kd">Kd:</label>
+            <button onclick="adjustPID('Kd', -0.1)">-</button>
+            <input class="pid-input" type="number" id="Kd" step="0.1">
+            <button onclick="adjustPID('Kd', 0.1)">+</button>
+        </div>
+
+        <button onclick="updatePID()">Update PID</button>
+    </div>
+</body>
+</html>
